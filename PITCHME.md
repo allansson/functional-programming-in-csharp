@@ -157,7 +157,7 @@ The dot-operator is a "convenience".
 Extension methods reflect this fact:
 
 ```csharp
-public static string DoubleLength(this string self) => self.Length * 2;
+string DoubleLength(this string self) => self.Length * 2;
 ```
 
 ---
@@ -337,13 +337,12 @@ public Task<IActionResult> ValidateHash<TRequest>(string hash, Func<Task<IAction
 ### Higher order functions
 
 ```csharp
-public Func<DateTime, string> CustomDateFormatter(string format)
+Func<DateTime, string> CustomDateFormatter(string format)
 {
     return dateTime => dateTime.ToString(format);
 }
 
-public Func<DateTime, string> CustomDateFormatter(string format) =>
-    dateTime => dateTime.ToString(format)
+Func<DateTime, string> CustomDateFormatter(string format) => dateTime => dateTime.ToString(format)
 ```
 
 +++
@@ -385,10 +384,45 @@ trimToUpper("  abcd  "); // "abcd"
 
 +++
 
+### Currying
+
+Turn a function with many parameters into many higher-order functions with only one parameter each
+
++++
+
+### Currying
+
+```csharp
+Func<UserRepository, RegisterUser, User> Handle =>
+    (repository, command) => repository(command.Id)
+        .Map(user => /* Business logic */);
+
+Func<UserRepository, Func<RegisterUser, User>> Handle =>
+    repository => command => repository(command.Id)
+        .Map(user => /* Business logic */);
+```
+
+
++++
+
+### Currying
+
+```csharp
+UserRepository repository = id => Some(new User(id));
+var commandHandler = Handle(repository);
+
+// Our command handler can no be called with same repository
+// repeatedly
+commandHandler(new RegisterUser { Id = "0123" });
+commandHandler(new RegisterUser { Id = "1234" });
+```
+
++++
+
 ### Filtering many things the C# way
 
 ```csharp
-public IEnumerable<User> GetActiveUsers(IEnumerable<User> users)
+IEnumerable<User> GetActiveUsers(IEnumerable<User> users)
 {
     var result = new List<User>();
 
@@ -409,7 +443,7 @@ public IEnumerable<User> GetActiveUsers(IEnumerable<User> users)
 ### Transforming many things the C# way
 
 ```csharp
-public IEnumerable<string> GetEmails(IEnumerable<User> users)
+IEnumerable<string> GetEmails(IEnumerable<User> users)
 {
     var result = new List<string>();
 
@@ -427,7 +461,7 @@ public IEnumerable<string> GetEmails(IEnumerable<User> users)
 ### Aggregating many things the C# way
 
 ```csharp
-public int GetTotalMessagesSent(IEnumerable<User> users)
+int GetTotalMessagesSent(IEnumerable<User> users)
 {
     var result = 0;
 
@@ -453,9 +487,9 @@ public int GetTotalMessagesSent(IEnumerable<User> users)
 ### Filtering many things with functions
 
 ```csharp
-public IEnumerable<User> Filter(IEnumerable<User> users, Func<User, bool> predicate)
+IEnumerable<User> Filter(IEnumerable<User> u, Func<User, bool> predicate)
 {
-    foreach (var user in users)
+    foreach (var user in u)
     {
         if (predicate(user))
         {
@@ -472,9 +506,9 @@ var activeUsers = Filter(users, user => user.Active);
 ### Transforming many things with functions
 
 ```csharp
-public IEnumerable<User> Map(IEnumerable<User> users, Func<User, string> transformation)
+IEnumerable<User> Map(IEnumerable<User> u, Func<User, string> transformation)
 {
-    foreach (var user in users)
+    foreach (var user in u)
     {
         yield return transformation(user);
     }
@@ -488,11 +522,11 @@ var userEmails = Map(users, user => user.Email);
 ### Aggregating many things the functional way
 
 ```csharp
-public int Fold(IEnumerable<User> users, Func<int, User, int> aggregator)
+int Fold(IEnumerable<User> u, Func<int, User, int> aggregator)
 {
     var result = 0;
 
-    foreach (var user in users)
+    foreach (var user in u)
     {
         result = aggregator(result, user);
     }
@@ -561,7 +595,7 @@ How do you design a API which may or may not return a value?
 ### Example interface
 
 ```csharp
-public interface UserRepository
+interface UserRepository
 {
     User ById(string id);
 }
@@ -575,7 +609,7 @@ public interface UserRepository
 ### Using null for abscence
 
 ```csharp
-public class SomeUserRepository : IUserRepository
+class SomeUserRepository : IUserRepository
 {
     public User ById(string id)
     {
@@ -643,7 +677,7 @@ Rules for using null:
 Lists could model absence:
 
 ```csharp
-public interface IUserRepository
+interface IUserRepository
 {
     IEnumerable<User> ById(string id);
 }
@@ -654,7 +688,7 @@ public interface IUserRepository
 ### A better way?
 
 ```csharp
-public class SomeUserRepository : IUserRepository
+class SomeUserRepository : IUserRepository
 {
     public IEnumerable<User> ById(string id)
     {
@@ -737,7 +771,7 @@ public class Maybe<T>
 Lists could model absence:
 
 ```csharp
-public interface IUserRepository
+interface IUserRepository
 {
     Maybe<User> ById(string id);
 }
@@ -748,7 +782,7 @@ public interface IUserRepository
 ### A better way!
 
 ```csharp
-public class SomeUserRepository : IUserRepository
+class SomeUserRepository : IUserRepository
 {
     public Maybe<User> ById(string id)
     {
@@ -797,7 +831,7 @@ They are part of a category of types called `Functors`.
 Sometimes we want to call another function returning a `Maybe`.
 
 ```csharp
-public static Maybe<char> FirstLetter(string input) =>
+Maybe<char> FirstLetter(string input) =>
     input.Length > 0 ? Maybe<char>.Some(input[0]) : Maybe<char>.None;
 
 // Won't compile, return type is actually Maybe<Maybe<char>>
@@ -876,7 +910,7 @@ interface IBackOff
     TimeSpan Calculate(int attempt);
 }
 
-public class ConstantBackOff : IBackOff
+class ConstantBackOff : IBackOff
 { 
     private TimeSpan backoff;
 
@@ -891,8 +925,8 @@ public class ConstantBackOff : IBackOff
     }
 }
 
-public class ExponentialBackOff : IBackOff { }
-public class ExponentialBackOffWithRandomVariance : IBackOff { }
+class ExponentialBackOff : IBackOff { }
+class ExponentialBackOffWithRandomVariance : IBackOff { }
 
 ```
 
@@ -907,15 +941,15 @@ public class ExponentialBackOffWithRandomVariance : IBackOff { }
 ### Configurable behaviors
 
 ```csharp
-public delegate TimeSpan BackOff(int attempt);
+delegate TimeSpan BackOff(int attempt);
 
-public static class BackOffs
+class BackOffs
 {
     public static BackOff Constant(TimeSpan value) =>
         _ => value;
 
     public static BackOff Exponential(TimeSpan start) =>
-        attempt => /* Calculations! */
+        attempt => /* Calculations! */;
 
     public static BackOff RandomVariance(Random random, BackOff otherFunction) =>
         otherFunction.AndThen(timeSpan => /* add some variance */);
