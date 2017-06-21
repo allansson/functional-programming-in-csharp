@@ -385,7 +385,7 @@ trimToUpper("  abcd  "); // "abcd"
 
 +++
 
-### Filtering things the C# way
+### Filtering many things the C# way
 
 ```csharp
 public IEnumerable<User> GetActiveUsers(IEnumerable<User> users)
@@ -424,7 +424,7 @@ public IEnumerable<string> GetEmails(IEnumerable<User> users)
 
 +++
 
-### Aggregating things the C# way
+### Aggregating many things the C# way
 
 ```csharp
 public int GetTotalMessagesSent(IEnumerable<User> users)
@@ -533,6 +533,22 @@ TAcc Fold<T, TAcc>(this IEnumerable<T> self, TAcc initialValue, Func<TAcc, T, TA
 
 +++
 
+### Dealing with many things
+
+Filter, map and fold can be chained:
+
+```csharp
+var to = users
+    .Where(u => u.IsActive)
+    .Select(u => u.Email)
+    .Aggregate("", (to, email) => to + email + ";");
+```
+
+> LINQ is actually lazy, so it will only iterate over the
+> items once and not until it has to (e.g. `ToList` or `Aggregate` is called)
+
++++
+
 ### Dealing with absence of things
 
 How do you design a API which may or may not return a value?
@@ -558,19 +574,53 @@ public interface UserRepository
 
 ### Using null for abscence
 
-* As an implementor, should I return null? Will my callers do proper null-checking?
-* As a caller, do I need to null check? Does the implementation return null?
+```csharp
+public class SomeUserRepository : IUserRepository
+{
+    public User ById(string id)
+    {
+        if (id == "1")
+        {
+            return new User(id);
+        }
+        else 
+        {
+            return null;
+        }
+    }
+}
+```
 
 +++
 
 ### Using null for abscence
 
-Honestly, who null checks everything?
+```csharp
+var user = userRepository.ById("2");
 
-Result:
+Console.WriteLine(user.Name);
+```
+
 ```
 NullReferenceException: Object reference not set to an instance of an object
 ```
+
++++
+
+### Using null for abscence
+
+* As an implementor:
+    * Should I return null? 
+    * Will my callers do proper null-checking?
+* As a caller: 
+    * Do I need to null check? 
+    * Does the implementation return null?
+
++++
+
+### Using null for abscence
+
+Seriously, who null-checks everything?
 
 +++
 
@@ -581,8 +631,10 @@ Rules for using null:
 1. Never, ever use `null`.
 2. If you have to use `null`, see rule 1.
 3. If your reeeally have to, make sure it is a comparison.
+4. If you still re-he-he-heally have to, you better be doing serialization
 
-> PS: Using instead `undefined` is just as bad. DS.
+> PS: Using `undefined` instead is just as bad, if not worse
+> because then you are using JavaScript. DS.
 
 +++
 
@@ -748,7 +800,7 @@ Sometimes we want to call another function returning a `Maybe`.
 public static Maybe<char> FirstLetter(string input) =>
     input.Length > 0 ? Maybe<char>.Some(input[0]) : Maybe<char>.None;
 
- // Won't compile, return type is actually Maybe<Maybe<char>>
+// Won't compile, return type is actually Maybe<Maybe<char>>
 Maybe<char> user.Map(u => u.Name)
     .Map(name => name.ToUpper())
     .Map(FirstLetter);
@@ -911,13 +963,13 @@ public void GivenAPreCondition_WhenDoingCoolStuff_ShouldBeMuchWow()
 
 ### But what about code organization?
 
-Classes are often used to group code together
+* Classes are often used to group code together
 
-* Repositories our database logic
-* Our application service contains all business logic
-* Etc.
+    * Repositories contains our database logic
+    * Our application service contains all business logic
+    * Etc.
 
-Makes it easier to find similar functionality!
+* Makes it easier to find similar functionality!
 
 +++
 
