@@ -302,8 +302,10 @@ Func<int, int ,int> sum = d.Invoke;
 
 ## The fun in functions
 
-* Composition
 * Higher order functions
+* Composition
+* Currying
+* Partial application
 * Dealing with many things
 * Dealing with absence
 
@@ -312,11 +314,11 @@ Func<int, int ,int> sum = d.Invoke;
 
 ### Higher order functions
 
-A function which:
+A higher order function is any function which:
 
 * accepts other functions as parameters
 * returns a new function
-* or both
+* or all of the above
 
 +++
 
@@ -393,19 +395,18 @@ Turn a function with many parameters into many higher-order functions with only 
 ### Currying
 
 ```csharp
-Func<UserRepository, RegisterUser, User> Handle =>
+Func<UserRepository, RegisterUser, User> Handle() =>
     (repository, command) => repository(command.Id)
         .Map(user => /* Business logic */);
 
-Func<UserRepository, Func<RegisterUser, User>> Handle =>
+Func<UserRepository, Func<RegisterUser, User>> Handle() =>
     repository => command => repository(command.Id)
         .Map(user => /* Business logic */);
 ```
 
-
 +++
 
-### Currying
+### Partial Application
 
 ```csharp
 UserRepository repository = id => Some(new User(id));
