@@ -300,6 +300,518 @@ Func<int, int ,int> sum = d.Invoke;
 
 ---
 
+## The fun in functions
+
+* Composition
+* Higher order functions
+* Dealing with many things
+* Dealing with absence
+
++++
+
+
+### Higher order functions
+
+A function which:
+
+* accepts other functions as parameters
+* returns a new function
+* or both
+
++++
+
+### Higher order functions
+
+```csharp
+public string Format(User user, Func<string, string> formatter)
+{
+    switch (user)
+    {
+        case Anonymous _:
+            return "Anonymous";
+
+        default:
+            return formatter(user.Name);
+    }
+}
+```
+
++++
+
+### Higher order functions
+
+```csharp
+public Func<DateTime, string> CustomDateFormatter(string format)
+{
+    return dateTime => dateTime.ToString(format);
+}
+
+public Func<DateTime, string> CustomDateFormatter(string format) =>
+    dateTime => dateTime.ToString(format)
+```
+
++++
+
+### Higher order functions
+
+```csharp
+public Func<User, string> IfActive(Func<User, string> format) =>
+    user => user.Active ? format(user) : "Not active";
+```
+
++++
+
+### Composition
+
+Functions can be composed to create new functions:
+
+```csharp
+public static Func<TIn1, TReturn> AndThen<TIn1, TIn2, TReturn>(this Func<TIn1, TIn2> self, Func<TIn2, TReturn> next) =>
+    arg => next(self(arg));
+```
+
+```haskell
+andThen f g x = g(f(x))
+```
+
++++
+
+### Composition
+
+```csharp
+Func<string, string> trim => str => str.Trim();
+Func<string, string> toUpper => str => str.ToUpper();
+
+Func<string, string> trimToUpper = trim.AndThen(toUpper);
+
+trimToUpper("  abcd  "); // "abcd"
+```
+
++++
+
+### Filtering things the C# way
+
+```csharp
+public IEnumerable<User> GetActiveUsers(IEnumerable<User> users)
+{
+    var result = new List<User>();
+
+    foreach (var user in users)
+    {
+        if (user.Active)
+        {
+            result.Add(user);
+        }
+    }
+
+    return result;
+}
+```
+
++++
+
+### Transforming many things the C# way
+
+```csharp
+public IEnumerable<string> GetEmails(IEnumerable<User> users)
+{
+    var result = new List<string>();
+
+    foreach (var user in users)
+    {
+        result.Add(user.Email);
+    }
+
+    return result;
+}
+```
+
++++
+
+### Aggregating things the C# way
+
+```csharp
+public int GetTotalMessagesSent(IEnumerable<User> users)
+{
+    var result = 0;
+
+    foreach (var user in users)
+    {
+        result += user.MessagesSent;
+    }
+
+    return result;
+}
+```
+
++++
+
+### Dealing with many things the C# way
+
+* The examples all look the same
+* A lot of duplicated logic
+* Most of the code is boilerplate
+
++++
+
+### Filtering many things with functions
+
+```csharp
+public IEnumerable<User> Filter(IEnumerable<User> users, Func<User, bool> predicate)
+{
+    foreach (var user in users)
+    {
+        if (predicate(user))
+        {
+            yield return user;
+        }
+    }
+}
+
+var activeUsers = Filter(users, user => user.Active);
+```
+
++++
+
+### Transforming many things with functions
+
+```csharp
+public IEnumerable<User> Map(IEnumerable<User> users, Func<User, string> transformation)
+{
+    foreach (var user in users)
+    {
+        yield return transformation(user);
+    }
+}
+
+var userEmails = Map(users, user => user.Email);
+```
+
++++
+
+### Aggregating many things the functional way
+
+```csharp
+public int Fold(IEnumerable<User> users, Func<int, User, int> aggregator)
+{
+    var result = 0;
+
+    foreach (var user in users)
+    {
+        result = aggregator(result, user);
+    }
+
+    return result;
+}
+
+var totalMessagesSent = Fold(users, (total, user) => total + user.MessagesSent);
+```
+
++++
+
+### Dealing with many things the functional way
+
+Generic implementations:
+
+```csharp
+IEnumerable<T> Filter<T>(this IEnumerable<T> self, Func<T, bool> predicate);
+IEnumerable<R> Map<T, R>(this IEnumerable<T> self, Func<T, R> mapper);
+TAcc Fold<T, TAcc>(this IEnumerable<T> self, TAcc initialValue, Func<TAcc, T, TAcc> aggregator);
+```
+
++++
+
+### Dealing with many things the functional way
+
+*  Filter/Map/Fold are standard functions
+*  Available in most languages with support for lambdas (incl. JavaScript)
+*  Fold is somtimes called Reduce (and comes in two flavors: left and right fold)
+
++++
+
+### Dealing with many things the LINQ way
+
+* `Filter` -> `Where`
+* `Map` -> `Select`
+* `Fold` (a.k.a. `Reduce`) -> `Aggregate`
+
++++
+
+### Dealing with absence of things
+
+How do you design a API which may or may not return a value?
+
+* Need to communicate expectations on implementations
+* Need to communicate expectations to callers
+
++++
+
+### Example interface
+
+```csharp
+public interface UserRepository
+{
+    User ById(string id);
+}
+```
+
+* What is the implementer expected to return when there is no user?
+* What will the caller expect the return value to be when there is no user?
+
++++
+
+### Using null for abscence
+
+* As an implementor, should I return null? Will my callers do proper null-checking?
+* As a caller, do I need to null check? Does the implementation return null?
+
++++
+
+### Using null for abscence
+
+Honestly, who null checks everything?
+
+Result:
+```
+NullReferenceException: Object reference not set to an instance of an object
+```
+
++++
+
+### Using null for absence
+
+Rules for using null:
+
+1. Never, ever use `null`.
+2. If you have to use `null`, see rule 1.
+3. If your reeeally have to, make sure it is a comparison.
+
+> PS: Using instead `undefined` is just as bad. DS.
+
++++
+
+### A better way?
+
+Lists could model absence:
+
+```csharp
+public interface IUserRepository
+{
+    IEnumerable<User> ById(string id);
+}
+```
+
++++
+
+### A better way?
+
+```csharp
+public class SomeUserRepository : IUserRepository
+{
+    public IEnumerable<User> ById(string id)
+    {
+        if (id == "1")
+        {
+            return new [] { new User(id) };
+        }
+        else {
+            return Enumerable.Empty<User>();
+        }
+    }
+}
+```
+
++++
+
+### A better way?
+
+```csharp
+var user = userRepository.ById("2");
+
+Console.WriteLine(user.Name); // Won't compile
+
+// Look ma', no NullReferenceExceptions
+var name = user
+    .Select(u => u.Name)
+    .Select(u => u.ToUpper())
+    .SingleOrDefault()
+    ?? "No such user"; // <- Unless we forget this
+
+Console.WriteLine(name);
+```
+
++++
+
+### A better way?
+
+Benefits:
+
+* Compile-time safe
+* No need for null-checks
+* Implementers know how to return no user
+* Callers know they need to deal with no user
+
++++
+
+### A better way?
+
+Downsides:
+
+* Implementers can return 2, 5 or 107 users
+* The `FirstOrDefault`/`SingleOrDefault` gets us right back into `null` land
+
++++
+
+### A better way!
+
+We need a special case of a list, allowing 0 or 1 instance!
+
++++
+
+### A better way!
+
+```csharp
+public class Maybe<T>
+{
+    Maybe<T> Some(T value) => new Maybe<T>(value);
+    Maybe<T> None() => new Maybe<T>();
+
+    Maybe<R> Map(Func<T, R> mapper);
+    Maybe<R> Bind<Func<T, Maybe<R>> binder);
+    T Or(Func<T> defaultValue);
+}
+```
+
++++
+
+### A better way!
+
+Lists could model absence:
+
+```csharp
+public interface IUserRepository
+{
+    Maybe<User> ById(string id);
+}
+```
+
++++
+
+### A better way!
+
+```csharp
+public class SomeUserRepository : IUserRepository
+{
+    public Maybe<User> ById(string id)
+    {
+        if (id == "1")
+        {
+            return Maybe<User>.Some(new User(id));
+        }
+        else 
+        {
+            return Maybe<User>.None();
+        }
+    }
+}
+```
+
++++
+
+### A better way!
+
+```csharp
+var user = userRepository.ById("2");
+
+Console.WriteLine(user.Name); // Won't compile
+
+// Look ma', no NullReferenceExceptions
+var name = user
+    .Map(u => u.Name) 
+    .Map(name => name.ToUpper())
+    .Or(() => "No such user");
+
+Console.WriteLine(name);
+```
+
++++
+
+### A better way!
+
+How come lists and our Maybe-type are so similar?
+
+They are part of a category of types called `Functors`. 
+
++++
+
+### Chaining things with Maybe
+
+Sometimes we want to call another function returning a `Maybe`.
+
+```csharp
+public static Maybe<char> FirstLetter(string input) =>
+    input.Length > 0 ? Maybe<char>.Some(input[0]) : Maybe<char>.None;
+
+ // Won't compile, return type is actually Maybe<Maybe<char>>
+Maybe<char> user.Map(u => u.Name)
+    .Map(name => name.ToUpper())
+    .Map(FirstLetter);
+```
+
++++
+
+### Chaining things with Maybe
+
+The `Bind`-function:
+
+```csharp
+Maybe<R> Bind<R>(Func<T, Maybe<R>> binder) =>
+    hasValue ? binder(value) : Maybe<R>.None();
+
+Maybe<R> Map<T>(Func<T, R> mapper) =>
+    hasValue ? Maybe<R>.Some(mapper(value)) : Maybe<R>.None();
+``` 
+
++++
+
+### Binding is like a railroad
+
+```csharp
+using static Maybe<int>; // Expose Some and None.
+
+var maybeInt = Some(0);
+
+maybeInt // Some 0
+    .Bind(v => Some(v + 1)) // Some 1
+    .Bind(v => Some(v + 1)) // Some 2
+    .Bind(v => None())      // None
+    .Bind(v => Some(v + 1)) // None
+    .Bind(v => Some(v + 1)) // None
+``` 
+
++++
+
+### What about lists?
+
+They can do it too. In LINQ, `Bind` is called `SelectMany`:
+
+```csharp
+var list = new List<int>()
+{
+    1, 2, 3
+};
+
+list
+    .Select(count => Enumerable.Range(0, count))
+    .ToList(); // [[0], [0, 1], [0, 1, 2]]
+
+list
+    .SelectMany(count => Enumerable.Range(0, count))
+    .ToList(); // [0, 0, 1, 0, 1, 2]
+```
+
+---
+
 ## Simpler code with functions
 
 By using what we have learned, we can do more while typing less!
@@ -370,7 +882,7 @@ public static class BackOffs
 ```csharp
 var commandHandler = 
     Handle<RegisterUser>(c => 
-        Users.Handle(Database.Users.ById, c)
+        Users.Handle(Database.Users.ById(connectionString), c)
     )
     .With(Authorization.InRole(Roles.Administrator))
     .With(Logging.Command)
