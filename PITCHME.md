@@ -276,6 +276,10 @@ var captureMe = 3;
 Func<int, int ,int> sum = (lhs, rhs) => lhs + rhs + captureMe;
 ```
 
++++
+
+### Behind the scenes
+
 ```csharp
 public class FuncDelegate982398202 // Random name
 {
@@ -332,7 +336,7 @@ public class ExponentialBackOffWithRandomVariance : IBackOff { }
 
 ```
 
-++
++++
 
 ### Configurable behaviors
 
@@ -343,7 +347,7 @@ public class ExponentialBackOffWithRandomVariance : IBackOff { }
 ### Configurable behaviors
 
 ```csharp
-public delgate TimeSpan BackOff(int attempt);
+public delegate TimeSpan BackOff(int attempt);
 
 public static class BackOffs
 {
@@ -357,6 +361,25 @@ public static class BackOffs
         otherFunction.AndThen(timeSpan => /* add some variance */);
 
 }
+```
+
++++
+
+### Cross-cutting concerns
+
+```csharp
+var commandHandler = 
+    Handle<RegisterUser>(c => 
+        Users.Handle(Database.Users.ById, c)
+    )
+    .With(Authorization.InRole(Roles.Administrator))
+    .With(Logging.Command)
+    .AndThen(Logging.Changes);
+
+commandHandler(new RegisterUser 
+{
+    UserId = "chunky_santa86"
+});
 ```
 
 +++
@@ -383,7 +406,7 @@ public void GivenAPreCondition_WhenDoingCoolStuff_ShouldBeMuchWow()
 Classes are often used to group code together
 
 * Repositories our database logic
-* Our application service class contains all business logic
+* Our application service contains all business logic
 * Etc.
 
 Makes it easier to find similar functionality!
