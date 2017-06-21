@@ -323,16 +323,12 @@ A function which:
 ### Higher order functions
 
 ```csharp
-public string Format(User user, Func<string, string> formatter)
+public Task<IActionResult> ValidateHash<TRequest>(string hash, Func<Task<IActionResult>> handler)
 {
-    switch (user)
-    {
-        case Anonymous _:
-            return "Anonymous";
+    if (HashIsValid(hash))
+        return handler();
 
-        default:
-            return formatter(user.Name);
-    }
+    return Task.FromResult(Unauthorized());
 }
 ```
 
