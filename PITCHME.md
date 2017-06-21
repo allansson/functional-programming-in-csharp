@@ -1,4 +1,4 @@
-## Functional design patterns for the lazy C# programmer
+## Functional programming for the lazy C# programmer
 ##### <span style="font-family:Helvetica Neue; font-weight:bold">The power of functions today!</span>
 
 ---
@@ -262,4 +262,157 @@ UserRepository users3 = users1.Invoke; // Works!
 
 Func<string, User> users3 = users2; // Compiler error!
 Func<string, User> users3 = users2.Invoke; // Works
+```
+
++++
+
+### Behind the scenes
+
+All lambdas or delegates are actually compiled to a class.
+
+```csharp
+var captureMe = 3;
+
+Func<int, int ,int> sum = (lhs, rhs) => lhs + rhs + captureMe;
+```
+
+```csharp
+public class FuncDelegate982398202 // Random name
+{
+    public int captureMe; // Captured variables
+
+    public int Invoke(int lhs, int rhs) // Arguments
+    {
+        return lhs + rhs; // Lambda body
+    }
+}
+
+FuncDelegate982398202 d = new FuncDelegate982398202();
+
+d.captureMe = captureMe;
+
+Func<int, int ,int> sum = d.Invoke;
+```
+
+---
+
+## Simpler code with functions
+
+By using what we have learned, we can do more while typing less!
+
++++
+
+### Configurable behaviors
+
+Implementing a backoff algorithm for failure recovery.
+
+```csharp
+interface IBackOff
+{
+    TimeSpan Calculate(int attempt);
+}
+
+public class ConstantBackOff : IBackOff
+{ 
+    private TimeSpan backoff;
+
+    public ConstantBackOff(TimeSpan backoff)
+    {
+        this.backoff = backoff;
+    }
+
+    public TimeSpan Calculate(int attempt)
+    {
+        return backoff;
+    }
+}
+
+public class ExponentialBackOff : IBackOff { }
+public class ExponentialBackOffWithRandomVariance : IBackOff { }
+
+```
+
+++
+
+### Configurable behaviors
+
+![Such code. Many sigh!](assets/simpsons-scream.jpg)
+
++++
+
+### Configurable behaviors
+
+```csharp
+public delgate TimeSpan BackOff(int attempt);
+
+public static class BackOffs
+{
+    public static BackOff Constant(TimeSpan value) =>
+        _ => value;
+
+    public static BackOff Exponential(TimeSpan start) =>
+        attempt => /* Calculations! */
+
+    public static BackOff RandomVariance(Random random, BackOff otherFunction) =>
+        otherFunction.AndThen(timeSpan => /* add some variance */);
+
+}
+```
+
++++
+
+### Mock-free testing
+
+```csharp
+[Fact]
+public void GivenAPreCondition_WhenDoingCoolStuff_ShouldBeMuchWow()
+{
+    var result = Users.Handle(_ => new User("1234"), new RegisterUser
+    {
+        UserId = "1234"
+    });
+
+    Assert.IsType<UserAlreadyExists>(result.ErrorOrDefault());
+}
+```
+
++++
+
+### But what about code organization?
+
+Classes are often used to group code together
+
+* Repositories our database logic
+* Our application service class contains all business logic
+* Etc.
+
+Makes it easier to find similar functionality!
+
++++
+
+### But what about code organization?
+
+No problem:
+
+```csharp
+public static class Users
+{
+    public static User ById(string id) => 
+        Execute(Queries.UsersById(id));
+
+    public static User Save(User user) => 
+        Execute(Queries.SaveUser(user));
+}
+
+UserRepository userRepository = Users.ById;
+```
+
++++
+
+### But what about code organization?
+
+With dependency injection:
+
+```csharp
+container.Register<UserRepository>(Users.ById);
 ```
