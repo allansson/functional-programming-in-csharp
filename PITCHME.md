@@ -162,7 +162,7 @@ public static string DoubleLength(this string self) => self.Length * 2;
 
 ---
 
-## Lambdas in C#
+## Lambdas in C&#35;
 
 * `Func<T1..TN, TResult>`
 * `Action<T1..TN>`
